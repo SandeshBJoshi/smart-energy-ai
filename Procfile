@@ -1,1 +1,1 @@
-web: gunicorn insightx.app:app
+web: gunicorn app:app
