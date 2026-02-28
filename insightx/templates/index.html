@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+{% block title %}INSIGHTX — Smart Energy Intelligence{% endblock %}
+
+{% block head %}
+<style>
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding: 0 4rem;
+  }
+
+  /* ─── ANIMATED GRID BACKGROUND ─── */
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,96,68,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,96,68,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridMove 20s linear infinite;
+  }
+
+  @keyframes gridMove {
+    from { transform: translateY(0); }
+    to { transform: translateY(60px); }
+  }
+
+  /* ─── ORB EFFECTS ─── */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,96,68,0.15) 0%, transparent 70%);
+    top: -100px; right: -100px;
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+
+  .orb-2 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,96,68,0.08) 0%, transparent 70%);
+    bottom: 0; left: 10%;
+    animation: orbFloat 12s ease-in-out infinite reverse;
+  }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0); }
+    33% { transform: translate(30px, -20px); }
+    66% { transform: translate(-20px, 30px); }
+  }
+
+  /* ─── HERO CONTENT ─── */
+  .hero-content {
+    position: relative; z-index: 2;
+    max-width: 700px;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--coral);
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s ease forwards;
+  }
+
+  .hero-eyebrow span {
+    display: inline-block;
+    width: 40px; height: 1px;
+    background: var(--coral);
+  }
+
+  .hero-title {
+    font-family: var(--font-head);
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--white);
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.35s ease forwards;
+  }
+
+  .hero-title .accent { color: var(--coral); text-shadow: 0 0 40px rgba(255,96,68,0.5); }
+
+  .hero-desc {
+    font-size: 1.05rem;
+    color: var(--white-dim);
+    line-height: 1.7;
+    max-width: 520px;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.5s ease forwards;
+  }
+
+  .hero-actions {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.65s ease forwards;
+  }
+
+  /* ─── HERO VISUAL (RIGHT SIDE) ─── */
+  .hero-visual {
+    position: absolute;
+    right: 4rem; top: 50%;
+    transform: translateY(-50%);
+    width: 420px; height: 420px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.5s ease forwards;
+  }
+
+  .energy-ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255,96,68,0.15);
+    animation: spin-slow 20s linear infinite;
+  }
+
+  .energy-ring:nth-child(2) {
+    inset: 30px;
+    border-color: rgba(255,96,68,0.2);
+    animation-duration: 15s;
+    animation-direction: reverse;
+  }
+
+  .energy-ring:nth-child(3) {
+    inset: 60px;
+    border-color: rgba(255,96,68,0.3);
+    animation-duration: 10s;
+  }
+
+  .energy-ring-dot {
+    position: absolute;
+    width: 8px; height: 8px;
+    background: var(--coral);
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--coral);
+    top: -4px; left: calc(50% - 4px);
+  }
+
+  .energy-core {
+    position: absolute;
+    inset: 100px;
+    background: radial-gradient(circle at center, rgba(255,96,68,0.2), transparent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .energy-core-num {
+    font-family: var(--font-head);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--coral);
+    text-shadow: 0 0 30px rgba(255,96,68,0.6);
+  }
+
+  .energy-core-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--white-dim);
+  }
+
+  /* ─── STATS STRIP ─── */
+  .stats-strip {
+    padding: 2rem 4rem;
+    border-top: 1px solid var(--space-4);
+    border-bottom: 1px solid var(--space-4);
+    background: var(--space-2);
+    display: flex;
+    gap: 0;
+  }
+
+  .stat-item {
+    flex: 1;
+    padding: 1rem 2rem;
+    border-right: 1px solid var(--space-4);
+    text-align: center;
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  /* ─── FEATURES ─── */
+  .features {
+    padding: 6rem 4rem;
+  }
+
+  .features-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .features-header h2 {
+    font-family: var(--font-head);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: 0.75rem;
+  }
+
+  .feature-card {
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-icon {
+    width: 50px; height: 50px;
+    border-radius: 10px;
+    background: var(--coral-dim);
+    border: 1px solid rgba(255,96,68,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .feature-card h3 {
+    font-family: var(--font-head);
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    color: var(--white);
+  }
+
+  .feature-card p {
+    font-size: 0.88rem;
+    color: var(--white-dim);
+    line-height: 1.65;
+  }
+
+  .feature-badge {
+    position: absolute;
+    top: 1rem; right: 1rem;
+  }
+
+  /* ─── ML CARDS SECTION ─── */
+  .ml-section {
+    padding: 4rem;
+    background: var(--space-2);
+    border-top: 1px solid var(--space-4);
+  }
+
+  .ml-card {
+    padding: 1.5rem;
+    position: relative;
+  }
+
+  .ml-algo {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--coral);
+    margin-bottom: 0.5rem;
+  }
+
+  .ml-task {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+
+  .ml-desc {
+    font-size: 0.83rem;
+    color: var(--white-dim);
+    line-height: 1.55;
+  }
+
+  /* ─── CTA ─── */
+  .cta-section {
+    padding: 6rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(255,96,68,0.08), transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-title {
+    font-family: var(--font-head);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    position: relative; z-index: 1;
+    margin-bottom: 1rem;
+  }
+
+  .cta-sub {
+    font-size: 1rem;
+    color: var(--white-dim);
+    margin-bottom: 2.5rem;
+    position: relative; z-index: 1;
+  }
+
+  .cta-actions {
+    display: flex; gap: 1rem;
+    justify-content: center;
+    position: relative; z-index: 1;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 2rem 4rem;
+    border-top: 1px solid var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  footer p {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--white-dim);
+    letter-spacing: 0.08em;
+  }
+
+  footer .team {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--coral);
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 768px) {
+    .hero { padding: 2rem 1.5rem; min-height: auto; padding-top: 4rem; }
+    .hero-visual { display: none; }
+    .stats-strip { padding: 1.5rem; flex-wrap: wrap; }
+    .features, .ml-section, .cta-section { padding: 4rem 1.5rem; }
+    footer { padding: 1.5rem; flex-direction: column; gap: 1rem; text-align: center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ─── HERO ─── -->
+<section class="hero scanlines">
+  <div class="hero-grid"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span></span>
+      INSIGHTX 2026 — AI-Powered Energy Intelligence
+    </div>
+
+    <h1 class="hero-title">
+      Smart <span class="accent">Energy</span><br>
+      Prediction<br>
+      System
+    </h1>
+
+    <p class="hero-desc">
+      Harness the power of 4 machine learning algorithms to predict, classify, and cluster energy consumption patterns with unparalleled accuracy.
+    </p>
+
+    <div class="hero-actions">
+      <a href="/predict" class="btn btn-primary">⚡ Run Predictions</a>
+      <a href="/dashboard" class="btn btn-outline">📊 View Dashboard</a>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="energy-ring"><div class="energy-ring-dot"></div></div>
+    <div class="energy-ring"><div class="energy-ring-dot"></div></div>
+    <div class="energy-ring"><div class="energy-ring-dot"></div></div>
+    <div class="energy-core">
+      <div class="energy-core-num" id="live-num">42.7</div>
+      <div class="energy-core-label">kWh Predicted</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── STATS STRIP ─── -->
+<div class="stats-strip" id="stats-strip">
+  <div class="stat-item fade-up-1">
+    <div class="stat-num" id="stat-records">—</div>
+    <div class="stat-label">Synthetic Records</div>
+  </div>
+  <div class="stat-item fade-up-2">
+    <div class="stat-num" id="stat-r2">—</div>
+    <div class="stat-label">LR R² Score</div>
+  </div>
+  <div class="stat-item fade-up-3">
+    <div class="stat-num" id="stat-dt">—</div>
+    <div class="stat-label">DT Accuracy</div>
+  </div>
+  <div class="stat-item fade-up-4">
+    <div class="stat-num" id="stat-knn">—</div>
+    <div class="stat-label">KNN Accuracy</div>
+  </div>
+</div>
+
+<!-- ─── FEATURES ─── -->
+<section class="features">
+  <div class="features-header fade-up">
+    <div class="section-label" style="justify-content:center">Platform Capabilities</div>
+    <h2>Built for the <span style="color:var(--coral)">Future</span></h2>
+  </div>
+
+  <div class="grid-3">
+    <div class="card feature-card fade-up-1">
+      <div class="feature-badge"><span class="badge badge-coral">Synthetic</span></div>
+      <div class="feature-icon">🧬</div>
+      <h3>Dataset Generator</h3>
+      <p>Auto-generate 1000+ realistic energy records with 8 features covering household size, appliance count, temperature, solar usage, and more.</p>
+    </div>
+
+    <div class="card feature-card fade-up-2">
+      <div class="feature-badge"><span class="badge badge-success">Live</span></div>
+      <div class="feature-icon">🤖</div>
+      <h3>4 ML Algorithms</h3>
+      <p>Linear Regression, Decision Tree, KNN, and K-Means each solving a distinct energy intelligence task simultaneously.</p>
+    </div>
+
+    <div class="card feature-card fade-up-3">
+      <div class="feature-badge"><span class="badge badge-warn">Real-time</span></div>
+      <div class="feature-icon">📡</div>
+      <h3>Live Predictions</h3>
+      <p>Input your household parameters and get instant predictions across all four models with confidence metrics and actionable recommendations.</p>
+    </div>
+
+    <div class="card feature-card fade-up-1">
+      <div class="feature-icon">📈</div>
+      <h3>Rich Visualizations</h3>
+      <p>Interactive charts showing consumption distributions, cluster maps, feature importance heatmaps, and monthly trend analysis.</p>
+    </div>
+
+    <div class="card feature-card fade-up-2">
+      <div class="feature-icon">⚡</div>
+      <h3>Energy Optimization</h3>
+      <p>AI-driven recommendations tailored to your consumption profile — from solar adoption to peak-hour load balancing strategies.</p>
+    </div>
+
+    <div class="card feature-card fade-up-3">
+      <div class="feature-icon">🔬</div>
+      <h3>Performance Metrics</h3>
+      <p>Full evaluation suite: R² score, RMSE, accuracy rates, cluster silhouette scores, and model comparison dashboards.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── ML ALGORITHMS ─── -->
+<section class="ml-section">
+  <div class="features-header fade-up" style="margin-bottom:3rem">
+    <div class="section-label" style="justify-content:center">Machine Learning Stack</div>
+    <h2>Four <span style="color:var(--coral)">Algorithms</span>, One System</h2>
+  </div>
+
+  <div class="grid-4">
+    <div class="card ml-card fade-up-1">
+      <div class="ml-algo">Algorithm 01</div>
+      <div class="ml-task">Linear Regression</div>
+      <div class="ml-desc">Continuous energy consumption prediction from household parameters with optimized feature weighting.</div>
+      <div style="margin-top:1rem">
+        <div class="section-label" style="font-size:0.65rem; margin-bottom:0.35rem">Task</div>
+        <span class="badge badge-coral">Predict kWh</span>
+      </div>
+    </div>
+
+    <div class="card ml-card fade-up-2">
+      <div class="ml-algo">Algorithm 02</div>
+      <div class="ml-task">Decision Tree</div>
+      <div class="ml-desc">Binary classification of high vs. low energy usage patterns based on behavioral and environmental signals.</div>
+      <div style="margin-top:1rem">
+        <div class="section-label" style="font-size:0.65rem; margin-bottom:0.35rem">Task</div>
+        <span class="badge badge-coral">Classify Usage</span>
+      </div>
+    </div>
+
+    <div class="card ml-card fade-up-3">
+      <div class="ml-algo">Algorithm 03</div>
+      <div class="ml-task">KNN Classifier</div>
+      <div class="ml-desc">K-nearest neighbours efficiency category prediction — identifying High, Medium, or Low efficiency households.</div>
+      <div style="margin-top:1rem">
+        <div class="section-label" style="font-size:0.65rem; margin-bottom:0.35rem">Task</div>
+        <span class="badge badge-coral">Efficiency Score</span>
+      </div>
+    </div>
+
+    <div class="card ml-card fade-up-4">
+      <div class="ml-algo">Algorithm 04</div>
+      <div class="ml-task">K-Means Clustering</div>
+      <div class="ml-desc">Unsupervised grouping of consumers into 4 behavioral clusters: Eco Savers, High Consumers, Moderate Users, Solar Champions.</div>
+      <div style="margin-top:1rem">
+        <div class="section-label" style="font-size:0.65rem; margin-bottom:0.35rem">Task</div>
+        <span class="badge badge-coral">Cluster Groups</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section class="cta-section">
+  <h2 class="cta-title">Ready to <span style="color:var(--coral)">Analyze</span> Energy?</h2>
+  <p class="cta-sub">Submit your household data and let the AI do the work.</p>
+  <div class="cta-actions">
+    <a href="/predict" class="btn btn-primary">⚡ Start Predicting</a>
+    <a href="/visualize" class="btn btn-ghost">📊 Explore Charts</a>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <p>© 2026 INSIGHTX — BVV Sangha's Basaveshwar Engineering College, Bagalkote</p>
+  <p>Dept of AIML · Association of Intelligent Minds</p>
+  <div class="team">TEAM 1</div>
+</footer>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Fetch and populate stats
+  fetch('/api/dataset-stats')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('stat-records').textContent = d.total_records.toLocaleString();
+      document.getElementById('stat-r2').textContent = d.lr_r2;
+      document.getElementById('stat-dt').textContent = (d.dt_accuracy * 100).toFixed(1) + '%';
+      document.getElementById('stat-knn').textContent = (d.knn_accuracy * 100).toFixed(1) + '%';
+    });
+
+  // Animate core number
+  const nums = [42.7, 38.1, 55.4, 29.9, 67.3, 44.2, 51.8];
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % nums.length;
+    const el = document.getElementById('live-num');
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = nums[i];
+      el.style.opacity = '1';
+      el.style.transition = 'opacity 0.4s';
+    }, 200);
+  }, 2000);
+
+  // Intersection observer for animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.animationPlayState = 'running';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-up-1, .fade-up-2, .fade-up-3, .fade-up-4').forEach(el => {
+    el.style.animationPlayState = 'paused';
+    observer.observe(el);
+  });
+</script>
+{% endblock %}

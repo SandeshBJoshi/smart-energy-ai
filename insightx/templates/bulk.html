@@ -1,0 +1,941 @@
+{% extends "base.html" %}
+{% block title %}Bulk Generate & Predict — INSIGHTX{% endblock %}
+
+{% block head %}
+<style>
+  .bulk-page {
+    padding: 3rem;
+  }
+
+  .bulk-header {
+    margin-bottom: 2.5rem;
+  }
+
+  .bulk-header h1 {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    letter-spacing: -0.01em;
+    margin-top: 0.4rem;
+  }
+
+  .bulk-header p {
+    font-size: 0.9rem;
+    color: var(--white-dim);
+    margin-top: 0.5rem;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  /* ─── CONFIG ROW ─── */
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 1.2rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+  }
+
+  .config-card {
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .config-title {
+    font-family: var(--font-head);
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ─── PROGRESS / STATUS ─── */
+  .status-bar {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+
+  .status-bar.show { display: block; }
+
+  .status-steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  .step::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    right: -50%;
+    height: 2px;
+    background: var(--space-5);
+    z-index: 0;
+  }
+
+  .step:last-child::after { display: none; }
+
+  .step-circle {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--space-5);
+    background: var(--space-3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--white-dim);
+    z-index: 1;
+    transition: all 0.4s;
+    position: relative;
+  }
+
+  .step-circle.active {
+    border-color: var(--coral);
+    background: var(--coral-dim);
+    color: var(--coral);
+    box-shadow: 0 0 15px rgba(255,96,68,0.4);
+  }
+
+  .step-circle.done {
+    border-color: #00d26e;
+    background: rgba(0,210,110,0.1);
+    color: #00d26e;
+  }
+
+  .step-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--white-dim);
+    text-align: center;
+  }
+
+  .progress-section { margin-bottom: 1rem; }
+  
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--white-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-label span:last-child { color: var(--coral); }
+
+  .big-progress-wrap {
+    background: var(--space-4);
+    border-radius: 100px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .big-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--coral), var(--coral-light));
+    box-shadow: 0 0 12px var(--coral-glow);
+    border-radius: 100px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .log-console {
+    background: var(--space);
+    border: 1px solid var(--space-5);
+    border-radius: 8px;
+    padding: 1rem;
+    height: 100px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--white-dim);
+    line-height: 1.8;
+  }
+
+  .log-line { display: block; }
+  .log-line.success { color: #00d26e; }
+  .log-line.coral { color: var(--coral); }
+  .log-line.warn { color: #ffc300; }
+
+  /* ─── SUMMARY CARDS ─── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+
+  .summary-row.show { display: grid; }
+
+  .summary-card {
+    padding: 1.2rem;
+    text-align: center;
+  }
+
+  .summary-val {
+    font-family: var(--font-head);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--coral);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .summary-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--white-dim);
+  }
+
+  /* ─── TABLE ─── */
+  .table-section {
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+
+  .table-section.show { display: block; }
+
+  .table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--space-2);
+    border: 1px solid var(--space-5);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .table-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .table-title {
+    font-family: var(--font-head);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+
+  .row-count {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--coral);
+    background: var(--coral-dim);
+    padding: 0.25rem 0.65rem;
+    border-radius: 100px;
+    border: 1px solid rgba(255,96,68,0.2);
+  }
+
+  .table-search {
+    background: var(--space-3);
+    border: 1px solid var(--space-5);
+    border-radius: 6px;
+    padding: 0.5rem 0.9rem;
+    color: var(--white);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+  }
+
+  .table-search:focus { border-color: var(--coral); }
+  .table-search::placeholder { color: var(--white-dim); }
+
+  .table-wrap {
+    background: var(--space-2);
+    border: 1px solid var(--space-5);
+    border-radius: 0 0 12px 12px;
+    overflow: auto;
+    max-height: 480px;
+  }
+
+  table.data-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1100px;
+  }
+
+  table.data-tbl thead {
+    position: sticky;
+    top: 0;
+    background: var(--space-3);
+    z-index: 2;
+  }
+
+  table.data-tbl th {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--coral);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--space-5);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+
+  table.data-tbl th:hover { background: var(--coral-dim); }
+
+  table.data-tbl th .sort-arrow {
+    display: inline-block;
+    margin-left: 4px;
+    opacity: 0.3;
+    font-size: 0.6rem;
+  }
+
+  table.data-tbl th.sorted-asc .sort-arrow::after { content: '▲'; opacity: 1; color: var(--coral); }
+  table.data-tbl th.sorted-desc .sort-arrow::after { content: '▼'; opacity: 1; color: var(--coral); }
+  table.data-tbl th:not(.sorted-asc):not(.sorted-desc) .sort-arrow::after { content: '⇅'; }
+
+  table.data-tbl td {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.6rem 1rem;
+    color: var(--white-dim);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    white-space: nowrap;
+  }
+
+  table.data-tbl tr:hover td { background: rgba(255,96,68,0.04); color: var(--white); }
+
+  .pred-kwh { color: var(--coral) !important; font-weight: 500; }
+  .pred-high { color: #ff4466 !important; }
+  .pred-low { color: #00d26e !important; }
+  .eff-high { color: #00d26e !important; }
+  .eff-mid { color: #ffc300 !important; }
+  .eff-low { color: #ff4466 !important; }
+
+  .cluster-pill {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 100px;
+    font-size: 0.62rem;
+    font-weight: 500;
+    border: 1px solid;
+  }
+
+  .c0 { background: rgba(255,96,68,0.12); color: #ff6044; border-color: rgba(255,96,68,0.3); }
+  .c1 { background: rgba(255,144,68,0.12); color: #ff9044; border-color: rgba(255,144,68,0.3); }
+  .c2 { background: rgba(255,68,136,0.12); color: #ff4488; border-color: rgba(255,68,136,0.3); }
+  .c3 { background: rgba(255,96,136,0.12); color: #ff6088; border-color: rgba(255,96,136,0.3); }
+
+  /* ─── PAGINATION ─── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--space-2);
+    border: 1px solid var(--space-5);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .page-btn {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--space-5);
+    background: var(--space-3);
+    color: var(--white-dim);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .page-btn:hover, .page-btn.active {
+    background: var(--coral-dim);
+    border-color: var(--coral);
+    color: var(--coral);
+  }
+
+  .page-info {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--white-dim);
+    padding: 0 0.5rem;
+  }
+
+  /* ─── DOWNLOAD ─── */
+  .download-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    display: none;
+  }
+
+  .download-row.show { display: flex; }
+
+  /* ─── CHART MINI SECTION ─── */
+  .mini-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+
+  .mini-charts.show { display: grid; }
+
+  .mini-chart-card {
+    padding: 1.2rem;
+  }
+
+  .mini-chart-title {
+    font-family: var(--font-head);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  .mini-chart-sub {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--white-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .bulk-page { padding: 1.5rem; }
+    .config-row { grid-template-columns: 1fr 1fr; }
+    .summary-row { grid-template-columns: repeat(3, 1fr); }
+    .mini-charts { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .config-row { grid-template-columns: 1fr; }
+    .summary-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bulk-page">
+
+  <!-- Header -->
+  <div class="bulk-header fade-up">
+    <div class="section-label">Additional Feature</div>
+    <h1>Bulk Generate <span style="color:var(--coral)">&</span> Predict</h1>
+    <p>Generate a synthetic dataset of 1500+ records, run all four ML models across every row, and download the fully predicted CSV — all in one click.</p>
+  </div>
+
+  <!-- Config -->
+  <div class="card config-card fade-up">
+    <div class="config-title">⚙️ Generation Config</div>
+    <div class="config-row">
+      <div class="form-group" style="margin:0">
+        <label>Number of Records</label>
+        <div class="input-with-value">
+          <input type="range" id="cfg-rows" min="1500" max="5000" step="100" value="1500"
+            oninput="document.getElementById('v-rows').textContent = (+this.value).toLocaleString()">
+          <span class="range-value" id="v-rows">1,500</span>
+        </div>
+        <div class="slider-labels"><span>1,500</span><span>5,000 rows</span></div>
+      </div>
+
+      <div class="form-group" style="margin:0">
+        <label>Random Seed</label>
+        <select id="cfg-seed">
+          <option value="42">Seed 42 (default)</option>
+          <option value="0">Seed 0</option>
+          <option value="7">Seed 7</option>
+          <option value="99">Seed 99</option>
+          <option value="-1">Random</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin:0">
+        <label>Include Noise</label>
+        <select id="cfg-noise">
+          <option value="low">Low Noise</option>
+          <option value="medium" selected>Medium Noise</option>
+          <option value="high">High Noise</option>
+        </select>
+      </div>
+
+      <div>
+        <button class="btn btn-primary" id="gen-btn" onclick="runBulk()" style="padding:0.75rem 1.6rem; white-space:nowrap">
+          ⚡ Generate & Predict
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Status -->
+  <div class="card status-bar" id="status-bar">
+    <div class="status-steps">
+      <div class="step">
+        <div class="step-circle" id="step-1">1</div>
+        <div class="step-label">Generate<br>Dataset</div>
+      </div>
+      <div class="step">
+        <div class="step-circle" id="step-2">2</div>
+        <div class="step-label">Linear<br>Regression</div>
+      </div>
+      <div class="step">
+        <div class="step-circle" id="step-3">3</div>
+        <div class="step-label">Decision<br>Tree</div>
+      </div>
+      <div class="step">
+        <div class="step-circle" id="step-4">4</div>
+        <div class="step-label">KNN<br>Classifier</div>
+      </div>
+      <div class="step">
+        <div class="step-circle" id="step-5">5</div>
+        <div class="step-label">K-Means<br>Clustering</div>
+      </div>
+      <div class="step">
+        <div class="step-circle" id="step-6">✓</div>
+        <div class="step-label">Ready to<br>Download</div>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-label">
+        <span id="prog-label">Initializing...</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="big-progress-wrap">
+        <div class="big-progress-fill" id="big-progress"></div>
+      </div>
+    </div>
+
+    <div class="log-console" id="log-console"></div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div class="summary-row" id="summary-row">
+    <div class="card summary-card">
+      <div class="summary-val" id="s-total">—</div>
+      <div class="summary-label">Rows Predicted</div>
+    </div>
+    <div class="card summary-card">
+      <div class="summary-val" id="s-avg">—</div>
+      <div class="summary-label">Avg kWh (LR)</div>
+    </div>
+    <div class="card summary-card">
+      <div class="summary-val" id="s-high">—%</div>
+      <div class="summary-label">High Usage (DT)</div>
+    </div>
+    <div class="card summary-card">
+      <div class="summary-val" id="s-eff">—%</div>
+      <div class="summary-label">High Efficiency</div>
+    </div>
+    <div class="card summary-card">
+      <div class="summary-val" id="s-solar">—%</div>
+      <div class="summary-label">Solar Adopters</div>
+    </div>
+  </div>
+
+  <!-- Mini Charts -->
+  <div class="mini-charts" id="mini-charts">
+    <div class="card mini-chart-card">
+      <div class="mini-chart-title">Predicted kWh Distribution</div>
+      <div class="mini-chart-sub">Linear Regression output bins</div>
+      <div style="height:180px"><canvas id="mc-kwh"></canvas></div>
+    </div>
+    <div class="card mini-chart-card">
+      <div class="mini-chart-title">Cluster Spread</div>
+      <div class="mini-chart-sub">K-Means on bulk data</div>
+      <div style="height:180px"><canvas id="mc-cluster"></canvas></div>
+    </div>
+    <div class="card mini-chart-card">
+      <div class="mini-chart-title">Usage Classification</div>
+      <div class="mini-chart-sub">Decision Tree results</div>
+      <div style="height:180px"><canvas id="mc-usage"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Download Row -->
+  <div class="download-row" id="download-row">
+    <button class="btn btn-primary" id="dl-csv-btn">⬇ Download Predictions CSV</button>
+    <button class="btn btn-outline" onclick="runBulk()">⟳ Regenerate</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-section" id="table-section">
+    <div class="table-toolbar">
+      <div class="table-toolbar-left">
+        <div class="table-title">Predicted Dataset</div>
+        <span class="row-count" id="tbl-count">0 rows</span>
+      </div>
+      <input type="text" class="table-search" id="tbl-search" placeholder="🔍  Search rows..." oninput="filterTable()">
+    </div>
+    <div class="table-wrap">
+      <table class="data-tbl" id="main-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)" class="sorted-asc">#<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(1)">HH Size<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(2)">Appliances<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(3)">Temp °C<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(4)">Work Hrs<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(5)">Solar<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(6)">Tariff ₹<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(7)">Day Type<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(8)">Prev kWh<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(9)">⚡ Pred kWh<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(10)">🌲 Usage<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(11)">👥 KNN Eff<span class="sort-arrow"></span></th>
+            <th onclick="sortTable(12)">🔵 Cluster<span class="sort-arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  Chart.defaults.color = 'rgba(240,237,232,0.5)';
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.font.size = 10;
+
+  const CORAL = '#ff6044';
+  const GRID = 'rgba(255,255,255,0.06)';
+  const CLUSTER_COLORS = ['#ff6044','#ff9044','#ff4488','#ff6088'];
+  const CLUSTER_NAMES = ['Eco Savers','High Consumers','Moderate Users','Solar Champions'];
+
+  let allData = [];
+  let filteredData = [];
+  let currentPage = 1;
+  const PAGE_SIZE = 50;
+  let sortCol = 0;
+  let sortDir = 'asc';
+  let miniCharts = {};
+
+  // ─── LOG CONSOLE ───
+  function log(msg, type='') {
+    const c = document.getElementById('log-console');
+    const line = document.createElement('span');
+    line.className = 'log-line ' + type;
+    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    c.appendChild(line);
+    c.appendChild(document.createElement('br'));
+    c.scrollTop = c.scrollHeight;
+  }
+
+  // ─── STEP UPDATER ───
+  function setStep(n, state) {
+    const el = document.getElementById('step-' + n);
+    el.className = 'step-circle ' + state;
+    if (state === 'done') el.textContent = '✓';
+  }
+
+  function setProgress(pct, label) {
+    document.getElementById('big-progress').style.width = pct + '%';
+    document.getElementById('prog-pct').textContent = pct + '%';
+    document.getElementById('prog-label').textContent = label;
+  }
+
+  // ─── MAIN RUN ───
+  async function runBulk() {
+    const rows = +document.getElementById('cfg-rows').value;
+    const seed = document.getElementById('cfg-seed').value;
+    const noise = document.getElementById('cfg-noise').value;
+
+    // Reset
+    allData = [];
+    filteredData = [];
+    document.getElementById('tbl-body').innerHTML = '';
+    document.getElementById('log-console').innerHTML = '';
+    Object.values(miniCharts).forEach(c => c.destroy());
+    miniCharts = {};
+
+    // Show status
+    document.getElementById('status-bar').classList.add('show');
+    document.getElementById('summary-row').classList.remove('show');
+    document.getElementById('mini-charts').classList.remove('show');
+    document.getElementById('table-section').classList.remove('show');
+    document.getElementById('download-row').classList.remove('show');
+    document.getElementById('gen-btn').disabled = true;
+
+    // Reset steps
+    for(let i=1; i<=6; i++) {
+      const el = document.getElementById('step-'+i);
+      el.className = 'step-circle';
+      el.textContent = i === 6 ? '✓' : i;
+    }
+
+    log(`Starting bulk generation: ${rows.toLocaleString()} rows, seed=${seed}, noise=${noise}`);
+    setProgress(5, 'Sending request...');
+
+    try {
+      setStep(1, 'active');
+      setProgress(10, 'Generating synthetic dataset...');
+
+      const res = await fetch('/api/bulk-generate-predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows, seed: +seed, noise })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      log(`✅ Generated ${data.total.toLocaleString()} rows`, 'success');
+      setStep(1, 'done');
+      setProgress(20, 'Running Linear Regression...');
+
+      // Simulate staged progress for UX
+      await delay(300);
+      setStep(2, 'active');
+      log(`⚡ Linear Regression: predicting ${data.total} kWh values...`, 'coral');
+      await delay(400);
+      setStep(2, 'done');
+      setProgress(40, 'Running Decision Tree classifier...');
+
+      setStep(3, 'active');
+      log(`🌲 Decision Tree: classifying high/low usage...`, 'coral');
+      await delay(350);
+      setStep(3, 'done');
+      setProgress(60, 'Running KNN...');
+
+      setStep(4, 'active');
+      log(`👥 KNN: predicting efficiency categories...`, 'coral');
+      await delay(350);
+      setStep(4, 'done');
+      setProgress(75, 'Running K-Means clustering...');
+
+      setStep(5, 'active');
+      log(`🔵 K-Means: clustering into ${data.n_clusters} groups...`, 'coral');
+      await delay(300);
+      setStep(5, 'done');
+      setProgress(90, 'Finalizing...');
+
+      await delay(200);
+      log(`✅ All models complete!`, 'success');
+      log(`📊 Stats — Avg kWh: ${data.summary.avg_kwh}, High Usage: ${data.summary.high_usage_pct}%, Solar: ${data.summary.solar_pct}%`, 'success');
+      setStep(6, 'done');
+      setProgress(100, 'Done!');
+
+      // Populate everything
+      allData = data.rows;
+      filteredData = [...allData];
+
+      populateSummary(data.summary, data.total);
+      populateMiniCharts(data.chart_data);
+      renderTable();
+
+      document.getElementById('summary-row').classList.add('show');
+      document.getElementById('mini-charts').classList.add('show');
+      document.getElementById('table-section').classList.add('show');
+      document.getElementById('download-row').classList.add('show');
+
+      // CSV download button
+      document.getElementById('dl-csv-btn').onclick = () => downloadCSV(data.csv_content, `insightx_predictions_${rows}rows.csv`);
+
+      showToast(`✅ ${data.total.toLocaleString()} rows predicted!`);
+
+    } catch(err) {
+      log('❌ Error: ' + err.message, 'warn');
+      showToast('Error: ' + err.message, 'error');
+    } finally {
+      document.getElementById('gen-btn').disabled = false;
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ─── SUMMARY ───
+  function populateSummary(s, total) {
+    document.getElementById('s-total').textContent = total.toLocaleString();
+    document.getElementById('s-avg').textContent = s.avg_kwh;
+    document.getElementById('s-high').textContent = s.high_usage_pct + '%';
+    document.getElementById('s-eff').textContent = s.high_eff_pct + '%';
+    document.getElementById('s-solar').textContent = s.solar_pct + '%';
+  }
+
+  // ─── MINI CHARTS ───
+  function populateMiniCharts(cd) {
+    // kWh distribution
+    miniCharts.kwh = new Chart(document.getElementById('mc-kwh'), {
+      type: 'bar',
+      data: {
+        labels: cd.kwh_dist.labels,
+        datasets: [{ data: cd.kwh_dist.values, backgroundColor: cd.kwh_dist.values.map((_, i) => `rgba(255,96,68,${0.3+i*0.07})`), borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { display: false }, y: { grid: { color: GRID } } }
+      }
+    });
+
+    // Cluster
+    miniCharts.cluster = new Chart(document.getElementById('mc-cluster'), {
+      type: 'doughnut',
+      data: {
+        labels: CLUSTER_NAMES,
+        datasets: [{ data: cd.cluster_counts, backgroundColor: CLUSTER_COLORS, borderColor: '#121313', borderWidth: 3 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 6, usePointStyle: true } } },
+        cutout: '55%'
+      }
+    });
+
+    // Usage bar
+    miniCharts.usage = new Chart(document.getElementById('mc-usage'), {
+      type: 'bar',
+      data: {
+        labels: ['Low Usage', 'High Usage'],
+        datasets: [{ data: cd.usage_counts, backgroundColor: ['rgba(0,210,110,0.7)', 'rgba(255,68,102,0.7)'], borderRadius: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { grid: { color: GRID } } }
+      }
+    });
+  }
+
+  // ─── TABLE ───
+  function renderTable() {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageData = filteredData.slice(start, start + PAGE_SIZE);
+    const tbody = document.getElementById('tbl-body');
+
+    document.getElementById('tbl-count').textContent = filteredData.length.toLocaleString() + ' rows';
+
+    tbody.innerHTML = pageData.map((r, i) => {
+      const idx = start + i + 1;
+      const usageClass = r.pred_high_usage === 'High Usage' ? 'pred-high' : 'pred-low';
+      const effClass = r.pred_efficiency.includes('High') ? 'eff-high' : r.pred_efficiency.includes('Low') ? 'eff-low' : 'eff-mid';
+      const clusterClass = 'c' + r.pred_cluster;
+      return `<tr>
+        <td style="color:var(--white-dim); opacity:0.5">${idx}</td>
+        <td>${r.household_size}</td>
+        <td>${r.appliance_count}</td>
+        <td>${r.avg_temperature}</td>
+        <td>${r.working_hours}</td>
+        <td>${r.solar_usage === 1 ? '<span style="color:#ffc300">☀ Yes</span>' : 'No'}</td>
+        <td>₹${r.electricity_tariff}</td>
+        <td>${r.day_type}</td>
+        <td>${r.previous_consumption}</td>
+        <td class="pred-kwh">${r.pred_kwh}</td>
+        <td class="${usageClass}">${r.pred_high_usage}</td>
+        <td class="${effClass}">${r.pred_efficiency}</td>
+        <td><span class="cluster-pill ${clusterClass}">${r.pred_cluster_label}</span></td>
+      </tr>`;
+    }).join('');
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const total = Math.ceil(filteredData.length / PAGE_SIZE);
+    const pg = document.getElementById('pagination');
+    if (total <= 1) { pg.innerHTML = ''; return; }
+
+    let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= currentPage-2 && i <= currentPage+2)) pages.push(i);
+      else if (pages[pages.length-1] !== '...') pages.push('...');
+    }
+    pages.forEach(p => {
+      if (p === '...') {
+        html += `<span class="page-info">...</span>`;
+      } else {
+        html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+      }
+    });
+    html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===total?'disabled':''}>›</button>`;
+    html += `<span class="page-info">${filteredData.length.toLocaleString()} rows · Page ${currentPage}/${total}</span>`;
+    pg.innerHTML = html;
+  }
+
+  function goPage(n) {
+    const total = Math.ceil(filteredData.length / PAGE_SIZE);
+    if (n < 1 || n > total) return;
+    currentPage = n;
+    renderTable();
+    document.getElementById('table-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ─── FILTER ───
+  function filterTable() {
+    const q = document.getElementById('tbl-search').value.toLowerCase();
+    filteredData = allData.filter(r =>
+      Object.values(r).some(v => String(v).toLowerCase().includes(q))
+    );
+    currentPage = 1;
+    renderTable();
+  }
+
+  // ─── SORT ───
+  function sortTable(colIdx) {
+    const keys = ['_idx','household_size','appliance_count','avg_temperature','working_hours',
+                  'solar_usage','electricity_tariff','day_type','previous_consumption',
+                  'pred_kwh','pred_high_usage','pred_efficiency','pred_cluster_label'];
+    const key = keys[colIdx];
+
+    if (sortCol === colIdx) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortCol = colIdx;
+      sortDir = 'asc';
+    }
+
+    filteredData.sort((a, b) => {
+      const av = isNaN(a[key]) ? a[key] : +a[key];
+      const bv = isNaN(b[key]) ? b[key] : +b[key];
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    document.querySelectorAll('table.data-tbl th').forEach((th, i) => {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+      if (i === colIdx) th.classList.add('sorted-' + sortDir);
+    });
+
+    currentPage = 1;
+    renderTable();
+  }
+
+  // ─── CSV DOWNLOAD ───
+  function downloadCSV(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV downloaded!');
+  }
+</script>
+{% endblock %}

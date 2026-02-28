@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% block title %}Visualize — INSIGHTX{% endblock %}
+
+{% block head %}
+<style>
+  .viz-page {
+    padding: 3rem;
+  }
+
+  .viz-header {
+    margin-bottom: 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .viz-header h1 {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    letter-spacing: -0.01em;
+    margin-top: 0.4rem;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 100px;
+    border: 1px solid var(--space-5);
+    background: transparent;
+    color: var(--white-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--coral-dim);
+    border-color: var(--coral);
+    color: var(--coral);
+  }
+
+  .viz-section-title {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.3rem;
+    color: var(--white);
+  }
+
+  .viz-section-sub {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--white-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-wrapper {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .big-chart { height: 320px; }
+  .med-chart { height: 260px; }
+  .sm-chart { height: 220px; }
+
+  .chart-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ─── ANIMATED LEGEND ─── */
+  .custom-legend {
+    display: flex;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--white-dim);
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* ─── INSIGHT CARDS ─── */
+  .insight-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .insight-card {
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .insight-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+
+  .insight-val {
+    font-family: var(--font-head);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--coral);
+    margin-bottom: 0.25rem;
+  }
+
+  .insight-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--white-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ─── CLUSTER VISUAL ─── */
+  .cluster-info {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .cluster-badge {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--space-5);
+    text-align: center;
+    background: var(--space-3);
+  }
+
+  .cluster-color-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    margin: 0 auto 0.5rem;
+  }
+
+  .cluster-name {
+    font-family: var(--font-head);
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+  }
+
+  .cluster-num {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--white-dim);
+  }
+
+  @media (max-width: 768px) {
+    .viz-page { padding: 1.5rem; }
+    .chart-row-2, .chart-row-3 { grid-template-columns: 1fr; }
+    .insight-row, .cluster-info { grid-template-columns: 1fr 1fr; }
+    .viz-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="viz-page">
+
+  <div class="viz-header fade-up">
+    <div>
+      <div class="section-label">Data Intelligence</div>
+      <h1>Visualizations</h1>
+    </div>
+    <button class="btn btn-outline" onclick="loadCharts()">⟳ Reload Charts</button>
+  </div>
+
+  <!-- Insight Quick Stats -->
+  <div class="insight-row">
+    <div class="card insight-card fade-up-1">
+      <div class="insight-icon">⚡</div>
+      <div class="insight-val" id="vi-avg">—</div>
+      <div class="insight-label">Avg kWh/day</div>
+    </div>
+    <div class="card insight-card fade-up-2">
+      <div class="insight-icon">🏠</div>
+      <div class="insight-val" id="vi-max">—</div>
+      <div class="insight-label">Peak Consumption</div>
+    </div>
+    <div class="card insight-card fade-up-3">
+      <div class="insight-icon">☀️</div>
+      <div class="insight-val" id="vi-solar">—%</div>
+      <div class="insight-label">Solar Adopters</div>
+    </div>
+    <div class="card insight-card fade-up-4">
+      <div class="insight-icon">📊</div>
+      <div class="insight-val" id="vi-r2">—</div>
+      <div class="insight-label">Model R² Score</div>
+    </div>
+  </div>
+
+  <!-- Row 1: Monthly + Consumption Distribution -->
+  <div class="chart-row-2">
+    <div class="card chart-wrapper">
+      <div class="viz-section-title">Monthly Energy Trend</div>
+      <div class="viz-section-sub">Average kWh consumption across all 12 months</div>
+      <div style="height:260px"><canvas id="v-monthly"></canvas></div>
+    </div>
+
+    <div class="card chart-wrapper">
+      <div class="viz-section-title">Consumption Distribution</div>
+      <div class="viz-section-sub">Histogram of energy usage bins</div>
+      <div style="height:260px"><canvas id="v-dist"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 2: Scatter Plot (full width) -->
+  <div class="card chart-wrapper" style="margin-bottom:1.5rem">
+    <div class="viz-section-title">Temperature vs Consumption Scatter</div>
+    <div class="viz-section-sub">200 random samples colored by K-Means cluster</div>
+    <div style="height:300px"><canvas id="v-scatter"></canvas></div>
+    <div class="custom-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6044"></div> Eco Savers</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff9044"></div> High Consumers</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff4488"></div> Moderate Users</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6088"></div> Solar Champions</div>
+    </div>
+  </div>
+
+  <!-- Row 3: 3 charts -->
+  <div class="chart-row-3">
+    <div class="card chart-wrapper">
+      <div class="viz-section-title">K-Means Cluster Split</div>
+      <div class="viz-section-sub">4 consumer behavioral segments</div>
+      <div style="height:220px"><canvas id="v-cluster"></canvas></div>
+    </div>
+
+    <div class="card chart-wrapper">
+      <div class="viz-section-title">Efficiency Categories</div>
+      <div class="viz-section-sub">KNN classifier output distribution</div>
+      <div style="height:220px"><canvas id="v-eff"></canvas></div>
+    </div>
+
+    <div class="card chart-wrapper">
+      <div class="viz-section-title">Feature Importance</div>
+      <div class="viz-section-sub">Linear Regression coefficients (normalized)</div>
+      <div style="height:220px"><canvas id="v-feat"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Cluster Summary -->
+  <div class="card chart-wrapper">
+    <div class="viz-section-title">Cluster Profile Summary</div>
+    <div class="viz-section-sub">K-Means segmentation results</div>
+    <div class="cluster-info">
+      <div class="cluster-badge">
+        <div class="cluster-color-dot" style="background:#ff6044"></div>
+        <div class="cluster-name">Eco Savers</div>
+        <div class="cluster-num">Cluster 0</div>
+      </div>
+      <div class="cluster-badge">
+        <div class="cluster-color-dot" style="background:#ff9044"></div>
+        <div class="cluster-name">High Consumers</div>
+        <div class="cluster-num">Cluster 1</div>
+      </div>
+      <div class="cluster-badge">
+        <div class="cluster-color-dot" style="background:#ff4488"></div>
+        <div class="cluster-name">Moderate Users</div>
+        <div class="cluster-num">Cluster 2</div>
+      </div>
+      <div class="cluster-badge">
+        <div class="cluster-color-dot" style="background:#ff6088"></div>
+        <div class="cluster-name">Solar Champions</div>
+        <div class="cluster-num">Cluster 3</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  Chart.defaults.color = 'rgba(240,237,232,0.5)';
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.font.size = 10;
+
+  const CORAL = '#ff6044';
+  const GRID = 'rgba(255,255,255,0.06)';
+  const CLUSTERS = ['#ff6044','#ff9044','#ff4488','#ff6088'];
+
+  let charts = {};
+
+  function destroyAll() { Object.values(charts).forEach(c => c.destroy()); charts = {}; }
+
+  function loadCharts() {
+    fetch('/api/dataset-stats').then(r => r.json()).then(d => {
+      document.getElementById('vi-avg').textContent = d.avg_consumption;
+      document.getElementById('vi-max').textContent = d.max_consumption;
+      document.getElementById('vi-solar').textContent = d.solar_usage_pct + '%';
+      document.getElementById('vi-r2').textContent = d.lr_r2;
+    });
+
+    fetch('/api/chart-data').then(r => r.json()).then(data => {
+      destroyAll();
+
+      // Monthly line
+      charts.monthly = new Chart(document.getElementById('v-monthly'), {
+        type: 'line',
+        data: {
+          labels: data.monthly.labels,
+          datasets: [{
+            data: data.monthly.values,
+            borderColor: CORAL,
+            backgroundColor: 'rgba(255,96,68,0.06)',
+            borderWidth: 2.5,
+            pointBackgroundColor: CORAL,
+            pointBorderColor: '#121313',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            fill: true,
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: GRID } },
+            y: { grid: { color: GRID }, ticks: { callback: v => v + ' kWh' } }
+          }
+        }
+      });
+
+      // Distribution
+      charts.dist = new Chart(document.getElementById('v-dist'), {
+        type: 'bar',
+        data: {
+          labels: data.consumption_dist.labels.map((l, i) => `${i+1}`),
+          datasets: [{
+            label: 'Records',
+            data: data.consumption_dist.values,
+            backgroundColor: data.consumption_dist.values.map((_, i) => 
+              `rgba(255,96,68,${0.25 + i * 0.07})`),
+            borderRadius: 5,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: GRID } }
+          }
+        }
+      });
+
+      // Scatter
+      charts.scatter = new Chart(document.getElementById('v-scatter'), {
+        type: 'scatter',
+        data: {
+          datasets: [0,1,2,3].map(c => ({
+            label: ['Eco Savers','High Consumers','Moderate Users','Solar Champions'][c],
+            data: data.scatter.x
+              .map((x, i) => ({ x, y: data.scatter.y[i], cluster: data.scatter.cluster[i] }))
+              .filter(p => p.cluster === c)
+              .map(p => ({ x: p.x, y: p.y })),
+            backgroundColor: CLUSTERS[c] + 'aa',
+            pointRadius: 4
+          }))
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: { boxWidth: 8, padding: 16, usePointStyle: true }
+            }
+          },
+          scales: {
+            x: { grid: { color: GRID }, title: { display: true, text: 'Avg Temperature (°C)' } },
+            y: { grid: { color: GRID }, title: { display: true, text: 'Energy Consumption (kWh)' } }
+          }
+        }
+      });
+
+      // Cluster doughnut
+      charts.cluster = new Chart(document.getElementById('v-cluster'), {
+        type: 'doughnut',
+        data: {
+          labels: data.cluster_data.labels,
+          datasets: [{ data: data.cluster_data.values, backgroundColor: CLUSTERS, borderColor: '#121313', borderWidth: 3 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 8, usePointStyle: true } } },
+          cutout: '55%'
+        }
+      });
+
+      // Efficiency polar area
+      charts.eff = new Chart(document.getElementById('v-eff'), {
+        type: 'polarArea',
+        data: {
+          labels: data.efficiency.labels,
+          datasets: [{ data: data.efficiency.values, backgroundColor: ['rgba(0,210,110,0.6)','rgba(255,195,0,0.6)','rgba(255,96,68,0.6)'] }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 8 } } },
+          scales: { r: { grid: { color: GRID }, ticks: { display: false } } }
+        }
+      });
+
+      // Feature importance horizontal bar
+      const names = ['Household','Appliances','Temperature','Work Hours','Solar','Tariff','Day Type','Prev. kWh'];
+      const maxV = Math.max(...data.feature_importance.values);
+      charts.feat = new Chart(document.getElementById('v-feat'), {
+        type: 'bar',
+        data: {
+          labels: names,
+          datasets: [{
+            data: data.feature_importance.values.map(v => +(v/maxV*100).toFixed(1)),
+            backgroundColor: 'rgba(255,96,68,0.7)',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: GRID }, max: 100, ticks: { callback: v => v + '%' } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+
+      showToast('Charts loaded!');
+    });
+  }
+
+  loadCharts();
+</script>
+{% endblock %}

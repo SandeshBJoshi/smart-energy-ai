@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — INSIGHTX{% endblock %}
+
+{% block head %}
+<style>
+  .dashboard {
+    padding: 3rem 3rem 4rem;
+  }
+
+  .dash-header {
+    margin-bottom: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .dash-header h1 {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-top: 0.4rem;
+  }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: #00d26e;
+    letter-spacing: 0.12em;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    background: #00d26e;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00d26e;
+    animation: pulse 1.5s infinite;
+  }
+
+  /* ─── STAT CARDS ROW ─── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card-icon {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    font-size: 1.6rem;
+    opacity: 0.15;
+  }
+
+  .stat-card .stat-num { font-size: 1.9rem; }
+
+  /* ─── MODEL METRICS ─── */
+  .model-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .model-card {
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .model-name {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--coral);
+    margin-bottom: 0.5rem;
+  }
+
+  .model-score {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+  }
+
+  .model-metric-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--white-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+  }
+
+  /* ─── CHARTS GRID ─── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .chart-card {
+    padding: 1.5rem;
+  }
+
+  .chart-title {
+    font-family: var(--font-head);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.3rem;
+    color: var(--white);
+  }
+
+  .chart-subtitle {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--white-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+  }
+
+  .chart-container {
+    position: relative;
+    width: 100%;
+  }
+
+  /* ─── DATA TABLE ─── */
+  .data-table-card {
+    margin-bottom: 1.2rem;
+    padding: 1.5rem;
+  }
+
+  .data-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--coral);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--space-5);
+  }
+
+  td {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.65rem 0.75rem;
+    color: var(--white-dim);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  tr:hover td { background: var(--white-faint); color: var(--white); }
+
+  /* ─── FEATURE IMPORTANCE ─── */
+  .feature-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .feature-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--white-dim);
+    width: 140px;
+    flex-shrink: 0;
+  }
+
+  .feature-bar-wrap {
+    flex: 1;
+    background: var(--space-4);
+    border-radius: 100px;
+    height: 5px;
+    overflow: hidden;
+  }
+
+  .feature-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--coral), var(--coral-light));
+    border-radius: 100px;
+    transition: width 1.2s ease;
+  }
+
+  .feature-val {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--coral);
+    width: 40px;
+    text-align: right;
+  }
+
+  @media (max-width: 768px) {
+    .dashboard { padding: 1.5rem; }
+    .stats-row, .model-metrics { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .dash-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+  
+  <!-- Header -->
+  <div class="dash-header fade-up">
+    <div>
+      <div class="section-label">Analytics Command Center</div>
+      <h1>Energy Dashboard</h1>
+    </div>
+    <div style="display:flex; gap:1rem; align-items:center">
+      <div class="live-badge"><div class="live-dot"></div> LIVE DATA</div>
+      <button class="btn btn-outline" onclick="refreshData()">⟳ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="card stat-card fade-up-1">
+      <div class="stat-card-icon">⚡</div>
+      <div class="stat-label">Total Records</div>
+      <div class="stat-num" id="d-records">—</div>
+    </div>
+    <div class="card stat-card fade-up-2">
+      <div class="stat-card-icon">📊</div>
+      <div class="stat-label">Avg. Consumption</div>
+      <div class="stat-num"><span id="d-avg">—</span> <small style="font-size:0.8rem; color:var(--white-dim)">kWh</small></div>
+    </div>
+    <div class="card stat-card fade-up-3">
+      <div class="stat-card-icon">☀️</div>
+      <div class="stat-label">Solar Adoption</div>
+      <div class="stat-num"><span id="d-solar">—</span>%</div>
+    </div>
+    <div class="card stat-card fade-up-4">
+      <div class="stat-card-icon">🔴</div>
+      <div class="stat-label">High Usage Rate</div>
+      <div class="stat-num"><span id="d-high">—</span>%</div>
+    </div>
+  </div>
+
+  <!-- Model Metrics -->
+  <div class="model-metrics">
+    <div class="card model-card fade-up-1">
+      <div class="model-name">Linear Regression</div>
+      <div class="model-score" id="m-r2">—</div>
+      <div class="model-metric-label">R² Score</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="pb-r2" style="width:0%"></div></div>
+    </div>
+    <div class="card model-card fade-up-2">
+      <div class="model-name">Linear Regression</div>
+      <div class="model-score" id="m-rmse">—</div>
+      <div class="model-metric-label">RMSE</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="pb-rmse" style="width:60%"></div></div>
+    </div>
+    <div class="card model-card fade-up-3">
+      <div class="model-name">Decision Tree</div>
+      <div class="model-score" id="m-dt">—</div>
+      <div class="model-metric-label">Accuracy</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="pb-dt" style="width:0%"></div></div>
+    </div>
+    <div class="card model-card fade-up-4">
+      <div class="model-name">KNN Classifier</div>
+      <div class="model-score" id="m-knn">—</div>
+      <div class="model-metric-label">Accuracy</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="pb-knn" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div class="charts-grid" style="margin-bottom:1.2rem">
+    <div class="card chart-card">
+      <div class="chart-title">Monthly Energy Trend</div>
+      <div class="chart-subtitle">Average kWh per month</div>
+      <div class="chart-container" style="height:250px">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+    <div class="card chart-card">
+      <div class="chart-title">Consumption Clusters</div>
+      <div class="chart-subtitle">K-Means Grouping</div>
+      <div class="chart-container" style="height:250px">
+        <canvas id="clusterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2 -->
+  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1.2rem; margin-bottom:1.2rem">
+    <div class="card chart-card">
+      <div class="chart-title">Usage Distribution</div>
+      <div class="chart-subtitle">Energy consumption bins</div>
+      <div class="chart-container" style="height:220px">
+        <canvas id="distChart"></canvas>
+      </div>
+    </div>
+    <div class="card chart-card">
+      <div class="chart-title">Efficiency Categories</div>
+      <div class="chart-subtitle">KNN Classification Output</div>
+      <div class="chart-container" style="height:220px">
+        <canvas id="effChart"></canvas>
+      </div>
+    </div>
+    <div class="card chart-card">
+      <div class="chart-title">Scatter: Temp vs kWh</div>
+      <div class="chart-subtitle">Colored by cluster</div>
+      <div class="chart-container" style="height:220px">
+        <canvas id="scatterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Importance -->
+  <div class="card data-table-card fade-up">
+    <div class="data-table-header">
+      <div>
+        <div class="chart-title">Feature Importance</div>
+        <div class="chart-subtitle">Linear Regression Coefficients</div>
+      </div>
+    </div>
+    <div id="feature-bars"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  Chart.defaults.color = 'rgba(240,237,232,0.5)';
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.font.size = 10;
+
+  const CORAL = '#ff6044';
+  const CORAL_DIM = 'rgba(255,96,68,0.15)';
+  const CLUSTER_COLORS = ['#ff6044','#ff9044','#ff4488','#ff6088'];
+  const GRID_COLOR = 'rgba(255,255,255,0.06)';
+
+  let charts = {};
+
+  function destroyCharts() {
+    Object.values(charts).forEach(c => c.destroy());
+    charts = {};
+  }
+
+  function initCharts(data) {
+    destroyCharts();
+
+    // Monthly
+    charts.monthly = new Chart(document.getElementById('monthlyChart'), {
+      type: 'line',
+      data: {
+        labels: data.monthly.labels,
+        datasets: [{
+          data: data.monthly.values,
+          borderColor: CORAL,
+          backgroundColor: 'rgba(255,96,68,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: CORAL,
+          pointRadius: 4,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: GRID_COLOR } },
+          y: { grid: { color: GRID_COLOR }, ticks: { callback: v => v + ' kWh' } }
+        }
+      }
+    });
+
+    // Cluster doughnut
+    charts.cluster = new Chart(document.getElementById('clusterChart'), {
+      type: 'doughnut',
+      data: {
+        labels: data.cluster_data.labels,
+        datasets: [{
+          data: data.cluster_data.values,
+          backgroundColor: CLUSTER_COLORS,
+          borderColor: '#121313',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 10, padding: 10 }
+          }
+        },
+        cutout: '60%'
+      }
+    });
+
+    // Distribution bar
+    charts.dist = new Chart(document.getElementById('distChart'), {
+      type: 'bar',
+      data: {
+        labels: data.consumption_dist.labels.map((l, i) => `B${i+1}`),
+        datasets: [{
+          data: data.consumption_dist.values,
+          backgroundColor: data.consumption_dist.values.map((_, i) => `rgba(255,96,68,${0.3 + i * 0.07})`),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { title: (items) => data.consumption_dist.labels[items[0].dataIndex] }
+        }},
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: GRID_COLOR } }
+        }
+      }
+    });
+
+    // Efficiency pie
+    charts.eff = new Chart(document.getElementById('effChart'), {
+      type: 'pie',
+      data: {
+        labels: data.efficiency.labels,
+        datasets: [{
+          data: data.efficiency.values,
+          backgroundColor: ['rgba(0,210,110,0.7)','rgba(255,195,0,0.7)','rgba(255,96,68,0.7)'],
+          borderColor: '#121313',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8 } } }
+      }
+    });
+
+    // Scatter
+    charts.scatter = new Chart(document.getElementById('scatterChart'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          data: data.scatter.x.map((x, i) => ({ x, y: data.scatter.y[i] })),
+          backgroundColor: data.scatter.cluster.map(c => CLUSTER_COLORS[c] + '99'),
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: GRID_COLOR }, title: { display: true, text: 'Temp (°C)', color: 'rgba(240,237,232,0.4)' } },
+          y: { grid: { color: GRID_COLOR }, title: { display: true, text: 'kWh', color: 'rgba(240,237,232,0.4)' } }
+        }
+      }
+    });
+
+    // Feature importance bars
+    const maxVal = Math.max(...data.feature_importance.values);
+    const names = ['Household Size','Appliance Count','Avg Temp','Working Hours','Solar Usage','Tariff','Day Type','Prev. Consumption'];
+    const container = document.getElementById('feature-bars');
+    container.innerHTML = data.feature_importance.features.map((f, i) => {
+      const pct = Math.round((data.feature_importance.values[i] / maxVal) * 100);
+      return `<div class="feature-row">
+        <div class="feature-label">${names[i] || f}</div>
+        <div class="feature-bar-wrap">
+          <div class="feature-bar" style="width:${pct}%"></div>
+        </div>
+        <div class="feature-val">${pct}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  function refreshData() {
+    fetch('/api/dataset-stats').then(r => r.json()).then(d => {
+      document.getElementById('d-records').textContent = d.total_records.toLocaleString();
+      document.getElementById('d-avg').textContent = d.avg_consumption;
+      document.getElementById('d-solar').textContent = d.solar_usage_pct;
+      document.getElementById('d-high').textContent = d.high_usage_pct;
+      document.getElementById('m-r2').textContent = d.lr_r2;
+      document.getElementById('m-rmse').textContent = d.lr_rmse;
+      document.getElementById('m-dt').textContent = (d.dt_accuracy * 100).toFixed(1) + '%';
+      document.getElementById('m-knn').textContent = (d.knn_accuracy * 100).toFixed(1) + '%';
+      document.getElementById('pb-r2').style.width = (d.lr_r2 * 100) + '%';
+      document.getElementById('pb-dt').style.width = (d.dt_accuracy * 100) + '%';
+      document.getElementById('pb-knn').style.width = (d.knn_accuracy * 100) + '%';
+    });
+
+    fetch('/api/chart-data').then(r => r.json()).then(initCharts);
+    showToast('Dashboard refreshed!');
+  }
+
+  refreshData();
+</script>
+{% endblock %}
